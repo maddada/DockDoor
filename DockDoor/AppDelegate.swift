@@ -62,6 +62,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Initialize active app indicator (handles its own visibility based on settings)
             activeAppIndicator = ActiveAppIndicatorCoordinator()
 
+            // Initialize window highlight observer (handles its own state based on settings)
+            _ = WindowHighlightObserver.shared
+
             if updater.automaticallyChecksForUpdates {
                 print("AppDelegate: Automatic updates enabled, checking in background.")
                 updater.checkForUpdatesInBackground()

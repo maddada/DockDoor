@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2125A278A641491482A75748 /* WindowHighlightCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36C94D499864A66B17518A9 /* WindowHighlightCoordinator.swift */; };
+		54AA451DEE5D467EA43490BB /* WindowHighlightObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B094A913962476E90568B03 /* WindowHighlightObserver.swift */; };
 		1A04FA16AC74448F83D0F964 /* ActiveAppIndicatorCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6F87422D4714171AD2CCC4A /* ActiveAppIndicatorCoordinator.swift */; };
 		DDE7D7ED954542C3BDF287E1 /* ActiveAppIndicatorOrientationObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = E975DCFA0DD94F85B976DB20 /* ActiveAppIndicatorOrientationObserver.swift */; };
 		7481FD0077674EC4855D8808 /* ActiveAppIndicatorVisibilityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26DF21ADE5544187AECDE80D /* ActiveAppIndicatorVisibilityManager.swift */; };
@@ -153,6 +155,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A36C94D499864A66B17518A9 /* WindowHighlightCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowHighlightCoordinator.swift; sourceTree = "<group>"; };
+		0B094A913962476E90568B03 /* WindowHighlightObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowHighlightObserver.swift; sourceTree = "<group>"; };
 		C6F87422D4714171AD2CCC4A /* ActiveAppIndicatorCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveAppIndicatorCoordinator.swift; sourceTree = "<group>"; };
 		E975DCFA0DD94F85B976DB20 /* ActiveAppIndicatorOrientationObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveAppIndicatorOrientationObserver.swift; sourceTree = "<group>"; };
 		26DF21ADE5544187AECDE80D /* ActiveAppIndicatorVisibilityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveAppIndicatorVisibilityManager.swift; sourceTree = "<group>"; };
@@ -488,6 +492,7 @@
 		BB157B772C0E32EF00997315 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				97FEB9AB8C8E43F699C64A0B /* Window Highlight */,
 				205C45E5266848C9B4F622AA /* ActiveAppIndicator */,
 				BB5D35532ED4C4CC006ECE15 /* DebugLogger.swift */,
 				BB21067C2E83565A002F87D6 /* KeyboardLabel.swift */,
@@ -705,6 +710,20 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+			isa = PBXGroup;
+			children = (
+			);
+			sourceTree = "<group>";
+		};
+		97FEB9AB8C8E43F699C64A0B /* Window Highlight */ = {
+			isa = PBXGroup;
+			children = (
+				A36C94D499864A66B17518A9 /* WindowHighlightCoordinator.swift */,
+				0B094A913962476E90568B03 /* WindowHighlightObserver.swift */,
+			);
+			path = "Window Highlight";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -821,6 +840,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2125A278A641491482A75748 /* WindowHighlightCoordinator.swift in Sources */,
+				54AA451DEE5D467EA43490BB /* WindowHighlightObserver.swift in Sources */,
 				1A04FA16AC74448F83D0F964 /* ActiveAppIndicatorCoordinator.swift in Sources */,
 				DDE7D7ED954542C3BDF287E1 /* ActiveAppIndicatorOrientationObserver.swift in Sources */,
 				F3A2B8C1D5E6489AAB123456 /* ActiveAppIndicatorPositioning.swift in Sources */,

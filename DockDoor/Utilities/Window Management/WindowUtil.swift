@@ -376,6 +376,14 @@ enum WindowUtil {
             if attemptActivation() {
                 // Optimistically update timestamp and leave breadcrumb
                 updateTimestampOptimistically(for: windowInfo)
+
+                // Trigger window highlight if enabled (DockDoor-initiated switch)
+                if Defaults[.highlightActiveWindow] {
+                    // Small delay to allow window to fully appear
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        WindowHighlightCoordinator.shared.showHighlight(for: windowInfo)
+                    }
+                }
                 return
             }
             retryCount += 1

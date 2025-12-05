@@ -93,6 +93,10 @@ struct MainSettingsView: View {
     @Default(.limitSwitcherToFrontmostApp) var limitSwitcherToFrontmostApp
     @Default(.fullscreenAppBlacklist) var fullscreenAppBlacklist
     @Default(.groupAppInstancesInDock) var groupAppInstancesInDock
+    @Default(.highlightActiveWindow) var highlightActiveWindow
+    @Default(.highlightActiveWindowOnlyDockDoor) var highlightActiveWindowOnlyDockDoor
+    @Default(.highlightActiveWindowUseCustomColor) var highlightUseCustomColor
+    @Default(.highlightActiveWindowColor) var highlightCustomColor
 
     @State private var selectedPerformanceProfile: SettingsProfile = .default
     @State private var selectedPreviewQualityProfile: PreviewQualityProfile = .standard
@@ -632,6 +636,48 @@ struct MainSettingsView: View {
             }
             StyledGroupBox(label: "Active App Indicator") {
                 ActiveAppIndicatorSettingsView()
+            }
+            StyledGroupBox(label: "Window Highlight") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(isOn: $highlightActiveWindow) { Text("Highlight activated window") }
+                    Text("Briefly flash a colored border around windows when they become active.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 20)
+
+                    if highlightActiveWindow {
+                        Toggle(isOn: $highlightActiveWindowOnlyDockDoor) { Text("Only highlight when using DockDoor to switch") }
+                            .padding(.leading, 20)
+                        Text("When enabled, only shows the highlight when you use the window switcher or dock previews to switch windows. When disabled, highlights all window activations system-wide.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 40)
+
+                        HStack {
+                            Toggle(isOn: $highlightUseCustomColor) { Text("Use custom color") }
+                            if highlightUseCustomColor {
+                                ColorPicker("", selection: $highlightCustomColor, supportsOpacity: false)
+                                    .labelsHidden()
+                            } else {
+                                Circle()
+                                    .fill(Color(nsColor: .controlAccentColor))
+                                    .frame(width: 20, height: 20)
+                                    .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1))
+                            }
+                        }
+                        .padding(.leading, 20)
+                        Text("Uses macOS accent color by default.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 40)
+                    }
+                }
+                .onChange(of: highlightActiveWindow) { _ in
+                    WindowHighlightObserver.shared.updateObservingState()
+                }
+                .onChange(of: highlightActiveWindowOnlyDockDoor) { _ in
+                    WindowHighlightObserver.shared.updateObservingState()
+                }
             }
         }.padding(.top, 5)
     }
