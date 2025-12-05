@@ -84,6 +84,7 @@ struct MainSettingsView: View {
     @Default(.showMenuBarIcon) var showMenuBarIcon
     @Default(.enableWindowSwitcher) var enableWindowSwitcher
     @Default(.enableWindowSwitcherSearch) var enableWindowSwitcherSearch
+    @Default(.searchFuzziness) var searchFuzziness
     @Default(.enableDockPreviews) var enableDockPreviews
     @Default(.keepPreviewOnAppTerminate) var keepPreviewOnAppTerminate
     @Default(.enableCmdTabEnhancements) var enableCmdTabEnhancements
@@ -411,6 +412,22 @@ struct MainSettingsView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Toggle(isOn: $includeHiddenWindowsInSwitcher) { Text("Include hidden/minimized windows in Switcher") }
                             Toggle(isOn: $enableWindowSwitcherSearch) { Text("Enable search while using Window Switcher") }
+                            if enableWindowSwitcherSearch {
+                                HStack {
+                                    Text("Search Fuzziness")
+                                    Slider(value: Binding(
+                                        get: { Double(searchFuzziness) },
+                                        set: { searchFuzziness = Int($0) }
+                                    ), in: 1 ... 5, step: 1)
+                                    Text("\(searchFuzziness)")
+                                        .frame(width: 20)
+                                }
+                                .padding(.leading, 20)
+                                Text("Level 1 is exact match, level 5 is most lenient fuzzy matching.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.leading, 20)
+                            }
                             Toggle(isOn: Binding(
                                 get: { !preventSwitcherHide },
                                 set: { preventSwitcherHide = !$0 }
