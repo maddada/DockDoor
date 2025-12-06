@@ -7,10 +7,11 @@ final class WindowHighlightCoordinator {
 
     private var highlightPanel: NSPanel?
     private var fadeOutWorkItem: DispatchWorkItem?
+    private var showWorkItem: DispatchWorkItem?
 
     private let borderWidth: CGFloat = 3.0
-    private let animationDuration: TimeInterval = 0.15
     private let visibleDuration: TimeInterval = 0.3
+    private let showDelay: TimeInterval = 0.1
 
     private init() {}
 
@@ -21,7 +22,9 @@ final class WindowHighlightCoordinator {
     func showHighlight(around frame: CGRect, on screen: NSScreen) {
         guard Defaults[.highlightActiveWindow] else { return }
 
-        // Cancel any pending fade out
+        // Cancel any pending show or fade out
+        showWorkItem?.cancel()
+        showWorkItem = nil
         fadeOutWorkItem?.cancel()
         fadeOutWorkItem = nil
 
@@ -29,25 +32,27 @@ final class WindowHighlightCoordinator {
         highlightPanel?.orderOut(nil)
         highlightPanel = nil
 
-        // Create the highlight panel
-        let panel = createHighlightPanel(for: frame, on: screen)
-        highlightPanel = panel
+        // Schedule the highlight to show after delay
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
 
-        // Show with fade in
-        panel.alphaValue = 0
-        panel.orderFrontRegardless()
+            // Create the highlight panel
+            let panel = createHighlightPanel(for: frame, on: screen)
+            highlightPanel = panel
 
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = animationDuration
-            panel.animator().alphaValue = 1.0
-        } completionHandler: { [weak self] in
-            // Schedule fade out after visible duration
-            let workItem = DispatchWorkItem { [weak self] in
+            // Show immediately
+            panel.orderFrontRegardless()
+
+            // Schedule hide after visible duration
+            let hideWorkItem = DispatchWorkItem { [weak self] in
                 self?.hideHighlight()
             }
-            self?.fadeOutWorkItem = workItem
-            DispatchQueue.main.asyncAfter(deadline: .now() + self!.visibleDuration, execute: workItem)
+            fadeOutWorkItem = hideWorkItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + visibleDuration, execute: hideWorkItem)
         }
+
+        showWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + showDelay, execute: workItem)
     }
 
     /// Shows a highlight around a WindowInfo object
@@ -78,15 +83,8 @@ final class WindowHighlightCoordinator {
     }
 
     private func hideHighlight() {
-        guard let panel = highlightPanel else { return }
-
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = animationDuration
-            panel.animator().alphaValue = 0
-        } completionHandler: { [weak self] in
-            self?.highlightPanel?.orderOut(nil)
-            self?.highlightPanel = nil
-        }
+        highlightPanel?.orderOut(nil)
+        highlightPanel = nil
     }
 
     private func createHighlightPanel(for frame: CGRect, on screen: NSScreen) -> NSPanel {
