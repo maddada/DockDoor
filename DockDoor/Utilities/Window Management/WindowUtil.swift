@@ -308,6 +308,87 @@ extension WindowUtil {
         }
     }
 
+    static func bringWindowToFront(windowInfo: WindowInfo) {
+        let maxRetries = 3
+        var retryCount = 0
+
+        func attemptActivation() -> Bool {
+            do {
+                // Use AltTab's approach: _SLPSSetFrontProcessWithOptions with userGenerated mode which
+                //                        brings only the specific window forward, not all windows of the app
+                var psn = ProcessSerialNumber()
+                _ = GetProcessForPID(windowInfo.app.processIdentifier, &psn)
+                _ = _SLPSSetFrontProcessWithOptions(&psn, UInt32(windowInfo.id), SLPSMode.userGenerated.rawValue)
+
+                // Make the window key using raw event bytes (ported from Hammerspoon/AltTab)
+                makeKeyWindow(&psn, windowID: windowInfo.id)
+
+                try windowInfo.axElement.performAction(kAXRaiseAction)
+                try windowInfo.axElement.setAttribute(kAXMainWindowAttribute, true)
+
+                return true
+            } catch {
+                print("Attempt \(retryCount + 1) failed to bring window to front: \(error)")
+                if error is AxError {
+                    removeWindowFromDesktopSpaceCache(with: windowInfo.id, in: windowInfo.app.processIdentifier)
+                }
+                return false
+            }
+        }
+
+        // Try activation with retries
+        while retryCount < maxRetries {
+            if attemptActivation() {
+                // Optimistically update timestamp and leave breadcrumb
+                updateTimestampOptimistically(for: windowInfo)
+
+                // Trigger window highlight if enabled (DockDoor-initiated switch)
+                if Defaults[.highlightActiveWindow] {
+                    // Small delay to allow window to fully appear
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        WindowHighlightCoordinator.shared.showHighlight(for: windowInfo)
+                    }
+                }
+                return
+            }
+            retryCount += 1
+            if retryCount < maxRetries {
+                usleep(50000)
+            }
+        }
+
+        print("Failed to bring window to front after \(maxRetries) attempts")
+    }
+
+    static func openNewWindow(app: NSRunningApplication) {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x2D, keyDown: true)
+        keyDown?.flags = .maskCommand
+        keyDown?.postToPid(app.processIdentifier)
+
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x2D, keyDown: false)
+        keyUp?.flags = .maskCommand
+        keyUp?.postToPid(app.processIdentifier)
+    }
+
+    static func closeWindow(windowInfo: WindowInfo) {
+        guard windowInfo.closeButton != nil else {
+            print("Error: closeButton is nil.")
+            return
+        }
+
+        do {
+            try windowInfo.closeButton?.performAction(kAXPressAction)
+            removeWindowFromDesktopSpaceCache(with: windowInfo.id, in: windowInfo.app.processIdentifier)
+        } catch {
+            print("Error closing window")
+            return
+        }
+    }
+
+    static func quitApp(windowInfo: WindowInfo, force: Bool) {
+        if force {
+            windowInfo.app.forceTerminate()
     static func getWindowsForFrontmostApp(from windows: [WindowInfo]) -> [WindowInfo] {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
             return windows

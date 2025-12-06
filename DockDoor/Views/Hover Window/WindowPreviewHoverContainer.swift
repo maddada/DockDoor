@@ -62,6 +62,7 @@ struct WindowPreviewHoverContainer: View {
     @Default(.gradientColorPalette) var gradientColorPalette
     @Default(.showAnimations) var showAnimations
     @Default(.scrollToMouseHoverInSwitcher) var scrollToMouseHoverInSwitcher
+    @Default(.windowSwitcherShowListView) var showListView
 
     @State private var draggedWindowIndex: Int? = nil
     @State private var isDragging = false
@@ -123,45 +124,52 @@ struct WindowPreviewHoverContainer: View {
 
         let orientationIsHorizontal = dockPosition.isHorizontalFlow || previewStateCoordinator.windowSwitcherActive
 
+        // Use list view when window switcher is active and list view mode is enabled
+        let shouldShowListView = previewStateCoordinator.windowSwitcherActive && showListView && !mockPreviewActive
+
         BaseHoverContainer(bestGuessMonitor: bestGuessMonitor, mockPreviewActive: mockPreviewActive) {
-            ScrollViewReader { scrollProxy in
-                buildFlowStack(
-                    scrollProxy: scrollProxy,
-                    orientationIsHorizontal,
-                    currentMaxDimensionForPreviews: calculatedMaxDimension,
-                    currentDimensionsMapForPreviews: calculatedDimensionsMap
-                )
-                .fadeOnEdges(axis: orientationIsHorizontal ? .horizontal : .vertical, fadeLength: 20)
-                .padding(.top, (!previewStateCoordinator.windowSwitcherActive && appNameStyle == .default && showAppTitleData) ? 25 : 0)
-                .overlay(alignment: appNameStyle == .popover ? .top : .topLeading) {
-                    hoverTitleBaseView(labelSize: measureString(appName, fontSize: 14))
-                        .onHover { isHovered in
-                            hoveringWindowTitle = isHovered
-                        }
-                }
-                .overlay {
-                    if !mockPreviewActive, !isDragging, dockPosition != .cmdTab {
-                        WindowDismissalContainer(appName: appName,
-                                                 bestGuessMonitor: bestGuessMonitor,
-                                                 dockPosition: dockPosition,
-                                                 dockItemElement: dockItemElement,
-                                                 minimizeAllWindowsCallback: { wasAppActiveBeforeClick in
-                                                     minimizeAllWindows(wasAppActiveBeforeClick: wasAppActiveBeforeClick)
-                                                 })
-                                                 .allowsHitTesting(false)
+            if shouldShowListView {
+                windowListContent()
+            } else {
+                ScrollViewReader { scrollProxy in
+                    buildFlowStack(
+                        scrollProxy: scrollProxy,
+                        orientationIsHorizontal,
+                        currentMaxDimensionForPreviews: calculatedMaxDimension,
+                        currentDimensionsMapForPreviews: calculatedDimensionsMap
+                    )
+                    .fadeOnEdges(axis: orientationIsHorizontal ? .horizontal : .vertical, fadeLength: 20)
+                    .padding(.top, (!previewStateCoordinator.windowSwitcherActive && appNameStyle == .default && showAppTitleData) ? 25 : 0)
+                    .overlay(alignment: appNameStyle == .popover ? .top : .topLeading) {
+                        hoverTitleBaseView(labelSize: measureString(appName, fontSize: 14))
+                            .onHover { isHovered in
+                                hoveringWindowTitle = isHovered
+                            }
                     }
-                }
-                .overlay {
-                    if dockPosition == .cmdTab,
-                       Defaults[.enableCmdTabEnhancements],
-                       !Defaults[.hasSeenCmdTabFocusHint],
-                       !previewStateCoordinator.windowSwitcherActive,
-                       previewStateCoordinator.currIndex < 0
-                    {
-                        CmdTabFocusFullOverlayView()
-                            .transition(.opacity)
-                            .allowsHitTesting(false)
-                            .clipShape(RoundedRectangle(cornerRadius: Defaults[.uniformCardRadius] ? 26 : 8, style: .continuous))
+                    .overlay {
+                        if !mockPreviewActive, !isDragging, dockPosition != .cmdTab {
+                            WindowDismissalContainer(appName: appName,
+                                                     bestGuessMonitor: bestGuessMonitor,
+                                                     dockPosition: dockPosition,
+                                                     dockItemElement: dockItemElement,
+                                                     minimizeAllWindowsCallback: { wasAppActiveBeforeClick in
+                                                         minimizeAllWindows(wasAppActiveBeforeClick: wasAppActiveBeforeClick)
+                                                     })
+                                                     .allowsHitTesting(false)
+                        }
+                    }
+                    .overlay {
+                        if dockPosition == .cmdTab,
+                           Defaults[.enableCmdTabEnhancements],
+                           !Defaults[.hasSeenCmdTabFocusHint],
+                           !previewStateCoordinator.windowSwitcherActive,
+                           previewStateCoordinator.currIndex < 0
+                        {
+                            CmdTabFocusFullOverlayView()
+                                .transition(.opacity)
+                                .allowsHitTesting(false)
+                                .clipShape(RoundedRectangle(cornerRadius: Defaults[.uniformCardRadius] ? 26 : 8, style: .continuous))
+                        }
                     }
                 }
             }
@@ -176,6 +184,25 @@ struct WindowPreviewHoverContainer: View {
                 previewStateCoordinator.searchQuery = ""
             }
         }
+    }
+
+    @ViewBuilder
+    private func windowListContent() -> some View {
+        WindowListView(
+            windows: previewStateCoordinator.windows,
+            filteredIndices: filteredWindowIndices(),
+            currentIndex: previewStateCoordinator.currIndex,
+            onWindowTap: onWindowTap,
+            handleWindowAction: { action, index in
+                handleWindowAction(action, at: index)
+            },
+            onHoverIndexChange: { hoveredIndex in
+                if let hoveredIndex, scrollToMouseHoverInSwitcher {
+                    previewStateCoordinator.setIndex(to: hoveredIndex, shouldScroll: Defaults[.scrollToMouseHoverInSwitcher])
+                }
+            }
+        )
+        .globalPadding(20)
     }
 
     private func handleWindowDrop(at location: CGPoint, for index: Int) {
@@ -738,16 +765,7 @@ struct WindowPreviewHoverContainer: View {
     }
 
     private func filteredWindowIndices() -> [Int] {
-        let query = previewStateCoordinator.searchQuery.lowercased()
-        guard previewStateCoordinator.windowSwitcherActive, !query.isEmpty else {
-            return Array(previewStateCoordinator.windows.indices)
-        }
-
-        return previewStateCoordinator.windows.enumerated().compactMap { idx, win in
-            let appName = win.app.localizedName?.lowercased() ?? ""
-            let windowTitle = (win.windowName ?? "").lowercased()
-            return (appName.contains(query) || windowTitle.contains(query)) ? idx : nil
-        }
+        previewStateCoordinator.filteredWindowIndices()
     }
 
     private func createFlowItems() -> [FlowItem] {

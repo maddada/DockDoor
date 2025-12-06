@@ -84,6 +84,10 @@ struct MainSettingsView: View {
     @Default(.showMenuBarIcon) var showMenuBarIcon
     @Default(.enableWindowSwitcher) var enableWindowSwitcher
     @Default(.enableWindowSwitcherSearch) var enableWindowSwitcherSearch
+    @Default(.searchFuzziness) var searchFuzziness
+    @Default(.windowSwitcherShowListView) var showListView
+    @Default(.listViewShowAppName) var listViewShowAppName
+    @Default(.windowSwitcherListFontSize) var listFontSize
     @Default(.enableDockPreviews) var enableDockPreviews
     @Default(.showWindowsFromCurrentSpaceOnly) var showWindowsFromCurrentSpaceOnly
     @Default(.windowPreviewSortOrder) var windowPreviewSortOrder
@@ -99,6 +103,10 @@ struct MainSettingsView: View {
     @Default(.limitSwitcherToFrontmostApp) var limitSwitcherToFrontmostApp
     @Default(.fullscreenAppBlacklist) var fullscreenAppBlacklist
     @Default(.groupAppInstancesInDock) var groupAppInstancesInDock
+    @Default(.highlightActiveWindow) var highlightActiveWindow
+    @Default(.highlightActiveWindowOnlyDockDoor) var highlightActiveWindowOnlyDockDoor
+    @Default(.highlightActiveWindowUseCustomColor) var highlightUseCustomColor
+    @Default(.highlightActiveWindowColor) var highlightCustomColor
 
     @State private var selectedPerformanceProfile: SettingsProfile = .default
     @State private var selectedPreviewQualityProfile: PreviewQualityProfile = .standard
@@ -437,6 +445,22 @@ struct MainSettingsView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Toggle(isOn: $includeHiddenWindowsInSwitcher) { Text("Include hidden/minimized windows in Switcher") }
                             Toggle(isOn: $enableWindowSwitcherSearch) { Text("Enable search while using Window Switcher") }
+                            if enableWindowSwitcherSearch {
+                                HStack {
+                                    Text("Search Fuzziness")
+                                    Slider(value: Binding(
+                                        get: { Double(searchFuzziness) },
+                                        set: { searchFuzziness = Int($0) }
+                                    ), in: 1 ... 5, step: 1)
+                                    Text("\(searchFuzziness)")
+                                        .frame(width: 20)
+                                }
+                                .padding(.leading, 20)
+                                Text("Level 1 is exact match, level 5 is most lenient fuzzy matching.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.leading, 20)
+                            }
                             Toggle(isOn: Binding(
                                 get: { !preventSwitcherHide },
                                 set: { preventSwitcherHide = !$0 }
@@ -457,6 +481,30 @@ struct MainSettingsView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .padding(.leading, 20)
+
+                            Toggle(isOn: $showListView) { Text("Show Windows List instead of previews") }
+                            Text("Display windows as a compact list with app icon and window name instead of window previews.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 20)
+
+                            if showListView {
+                                Toggle(isOn: $listViewShowAppName) { Text("Show app name") }
+                                    .padding(.leading, 20)
+                                Text("When disabled, only shows the window title.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.leading, 40)
+
+                                HStack {
+                                    Text("List Font Size")
+                                    Slider(value: $listFontSize, in: 10 ... 20, step: 1)
+                                    Text("\(Int(listFontSize))pt")
+                                        .frame(width: 35, alignment: .trailing)
+                                        .monospacedDigit()
+                                }
+                                .padding(.leading, 20)
+                            }
 
                             Toggle(isOn: $showWindowsFromCurrentSpaceOnlyInSwitcher) { Text("Show windows from current Space only") }
                             Text("Only display windows that are in the current virtual desktop/Space.")
@@ -699,6 +747,48 @@ struct MainSettingsView: View {
             }
             StyledGroupBox(label: "Active App Indicator") {
                 ActiveAppIndicatorSettingsView()
+            }
+            StyledGroupBox(label: "Window Highlight") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(isOn: $highlightActiveWindow) { Text("Highlight activated window") }
+                    Text("Briefly flash a colored border around windows when they become active.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 20)
+
+                    if highlightActiveWindow {
+                        Toggle(isOn: $highlightActiveWindowOnlyDockDoor) { Text("Only highlight when using DockDoor to switch") }
+                            .padding(.leading, 20)
+                        Text("When enabled, only shows the highlight when you use the window switcher or dock previews to switch windows. When disabled, highlights all window activations system-wide.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 40)
+
+                        HStack {
+                            Toggle(isOn: $highlightUseCustomColor) { Text("Use custom color") }
+                            if highlightUseCustomColor {
+                                ColorPicker("", selection: $highlightCustomColor, supportsOpacity: false)
+                                    .labelsHidden()
+                            } else {
+                                Circle()
+                                    .fill(Color(nsColor: .controlAccentColor))
+                                    .frame(width: 20, height: 20)
+                                    .overlay(Circle().stroke(Color.primary.opacity(0.2), lineWidth: 1))
+                            }
+                        }
+                        .padding(.leading, 20)
+                        Text("Uses macOS accent color by default.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 40)
+                    }
+                }
+                .onChange(of: highlightActiveWindow) { _ in
+                    WindowHighlightObserver.shared.updateObservingState()
+                }
+                .onChange(of: highlightActiveWindowOnlyDockDoor) { _ in
+                    WindowHighlightObserver.shared.updateObservingState()
+                }
             }
         }.padding(.top, 5)
     }

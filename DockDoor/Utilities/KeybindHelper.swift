@@ -35,12 +35,24 @@ private class WindowSwitchingCoordinator {
         defer { isProcessingSwitcher = false }
 
         if stateManager.isActive {
-            if isShiftPressed {
-                stateManager.cycleBackward()
+            // Use filter-aware navigation when search is active
+            let coordinator = previewCoordinator.windowSwitcherCoordinator
+            if coordinator.hasActiveSearch {
+                if isShiftPressed {
+                    coordinator.cycleBackwardFiltered()
+                } else {
+                    coordinator.cycleForwardFiltered()
+                }
+                // Sync the stateManager index with the coordinator's filtered index
+                stateManager.setIndex(coordinator.currIndex)
             } else {
-                stateManager.cycleForward()
+                if isShiftPressed {
+                    stateManager.cycleBackward()
+                } else {
+                    stateManager.cycleForward()
+                }
+                coordinator.setIndex(to: stateManager.currentIndex)
             }
-            previewCoordinator.windowSwitcherCoordinator.setIndex(to: stateManager.currentIndex)
         } else if isModifierPressed {
             await initializeWindowSwitching(
                 previewCoordinator: previewCoordinator
@@ -588,8 +600,21 @@ class KeybindHelper {
                     .down
                 }
                 return (true, { @MainActor in
-                    let hasActiveSearch = self.previewCoordinator.windowSwitcherCoordinator.hasActiveSearch
-                    if !hasActiveSearch {
+                    let coordinator = self.previewCoordinator.windowSwitcherCoordinator
+                    let hasActiveSearch = coordinator.hasActiveSearch
+                    let isListView = Defaults[.windowSwitcherShowListView]
+
+                    // In list view, use up/down arrows to cycle through windows (like alt+tab)
+                    if isListView, coordinator.windowSwitcherActive,
+                       keyCode == Int64(kVK_UpArrow) || keyCode == Int64(kVK_DownArrow)
+                    {
+                        if keyCode == Int64(kVK_UpArrow) {
+                            coordinator.cycleBackwardFiltered()
+                        } else {
+                            coordinator.cycleForwardFiltered()
+                        }
+                        self.windowSwitchingCoordinator.stateManager.setIndex(coordinator.currIndex)
+                    } else if !hasActiveSearch {
                         self.previewCoordinator.navigateWithArrowKey(direction: dir)
                     }
                 })
