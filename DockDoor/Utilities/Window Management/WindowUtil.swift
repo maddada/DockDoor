@@ -422,6 +422,44 @@ enum WindowUtil {
         purgeAppCache(with: windowInfo.app.processIdentifier)
     }
 
+    /// Filters windows to only include those in the current Space.
+    /// Uses SCShareableContent to determine on-screen status (modern API).
+    /// TODO: Update window observer to track window space in cache
+    static func filterWindowsByCurrentSpace(_ windows: [WindowInfo]) async -> [WindowInfo] {
+        let activeSpaceIDs = currentActiveSpaceIDs()
+
+        // Use SCShareableContent to get on-screen window IDs
+        let onScreenWindowIDs: Set<CGWindowID> = if let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true) {
+            Set(content.windows.map(\.windowID))
+        } else {
+            []
+        }
+
+        return windows.filter { windowInfo in
+            let windowSpaces = Set(windowInfo.id.cgsSpaces().map { Int($0) })
+            let isOnScreen = onScreenWindowIDs.contains(windowInfo.id)
+
+            // For minimized/hidden windows, check if they belong to current space
+            if windowInfo.isMinimized || windowInfo.isHidden {
+                if !windowSpaces.isEmpty {
+                    return !windowSpaces.isDisjoint(with: activeSpaceIDs)
+                }
+                if let spaceID = windowInfo.spaceID {
+                    return activeSpaceIDs.contains(spaceID)
+                }
+                return true
+            }
+
+            // For normal windows, check space info
+            if !windowSpaces.isEmpty {
+                return !windowSpaces.isDisjoint(with: activeSpaceIDs)
+            }
+
+            // If no space info, check if window is on screen
+            return isOnScreen
+        }
+    }
+
     static func getAllWindowsOfAllApps() -> [WindowInfo] {
         let windows = desktopSpaceWindowCacheManager.getAllWindows()
         let filteredWindows = !Defaults[.includeHiddenWindowsInSwitcher]
