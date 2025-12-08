@@ -386,9 +386,6 @@ extension WindowUtil {
         }
     }
 
-    static func quitApp(windowInfo: WindowInfo, force: Bool) {
-        if force {
-            windowInfo.app.forceTerminate()
     static func getWindowsForFrontmostApp(from windows: [WindowInfo]) -> [WindowInfo] {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
             return windows
@@ -878,21 +875,6 @@ extension WindowUtil {
         }
 
         return false
-    }
-}
-
-// MARK: - Window Actions
-
-extension WindowUtil {
-    static func openNewWindow(app: NSRunningApplication) {
-        let source = CGEventSource(stateID: .combinedSessionState)
-        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x2D, keyDown: true)
-        keyDown?.flags = .maskCommand
-        keyDown?.postToPid(app.processIdentifier)
-
-        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x2D, keyDown: false)
-        keyUp?.flags = .maskCommand
-        keyUp?.postToPid(app.processIdentifier)
     }
 }
 

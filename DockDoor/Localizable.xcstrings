@@ -54553,6 +54553,9 @@
         }
       }
     },
+    "Only display windows that are in the current virtual desktop/Space." : {
+
+    },
     "Only highlight when using DockDoor to switch" : {
 
     },
@@ -78001,6 +78004,9 @@
           }
         }
       }
+    },
+    "Show windows from current Space only" : {
+
     },
     "Show Windows List instead of previews" : {
       "comment" : "A toggle that lets the user choose whether to display windows as a compact list with app icon and window name instead of window previews.",
