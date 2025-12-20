@@ -16976,6 +16976,9 @@
         }
       }
     },
+    "Auto-scroll speed:" : {
+
+    },
     "Automatic Updates" : {
       "localizations" : {
         "af" : {
@@ -22310,6 +22313,9 @@
           }
         }
       }
+    },
+    "Choose whether vertical or horizontal scrolling controls the media widget." : {
+
     },
     "Clear" : {
       "localizations" : {
@@ -52806,6 +52812,12 @@
           }
         }
       }
+    },
+    "Horizontal" : {
+      "comment" : "Media widget scroll direction option"
+    },
+    "Horizontal scrolling may interfere with dock preview gestures." : {
+
     },
     "Hover Window Open Delay" : {
       "extractionState" : "stale",
@@ -89225,6 +89237,9 @@
     "Scroll behavior:" : {
 
     },
+    "Scroll direction:" : {
+
+    },
     "Scroll long titles (marquee)" : {
       "localizations" : {
         "af" : {
@@ -114018,6 +114033,9 @@
           }
         }
       }
+    },
+    "Vertical" : {
+      "comment" : "Media widget scroll direction option"
     },
     "View" : {
       "localizations" : {
