@@ -1532,6 +1532,9 @@
         }
       }
     },
+    "%lld%%" : {
+
+    },
     "%lld+ windows" : {
       "localizations" : {
         "af" : {
@@ -14298,7 +14301,11 @@
         }
       }
     },
+<<<<<<< HEAD
     "Anchor to top of screen" : {
+=======
+    "Anchor to top" : {
+>>>>>>> 14ee732 (feat: added sliders that let the user adjust the position of the window switcher (useful for large screens) and added toggle to align the switcher to the top instead of center it (#940))
 
     },
     "Animation speed" : {
@@ -23436,6 +23443,7 @@
       }
     },
     "Choose where the window switcher appears on screen." : {
+      "extractionState" : "stale",
       "localizations" : {
         "af" : {
           "stringUnit" : {
@@ -75036,6 +75044,9 @@
         }
       }
     },
+    "Offset position" : {
+
+    },
     "OK" : {
       "localizations" : {
         "af" : {
@@ -79226,7 +79237,11 @@
         }
       }
     },
+    "Pin to" : {
+
+    },
     "Pin to Screen" : {
+      "extractionState" : "stale",
       "localizations" : {
         "af" : {
           "stringUnit" : {
@@ -79986,6 +80001,9 @@
           }
         }
       }
+    },
+    "Placement" : {
+
     },
     "Placement Strategy" : {
       "extractionState" : "stale",
@@ -93884,7 +93902,6 @@
       }
     },
     "Screen" : {
-      "extractionState" : "stale",
       "localizations" : {
         "af" : {
           "stringUnit" : {
@@ -113698,7 +113715,11 @@
         }
       }
     },
+    "This display is currently disconnected." : {
+
+    },
     "This display is currently disconnected. The window switcher will appear on the main display until reconnected." : {
+      "extractionState" : "stale",
       "localizations" : {
         "af" : {
           "stringUnit" : {
@@ -115601,6 +115622,9 @@
           }
         }
       }
+    },
+    "Top edge stays fixed regardless of switcher size." : {
+
     },
     "Top Left" : {
       "comment" : "Preview window title position option\nTraffic light buttons position option",
@@ -131610,6 +131634,7 @@
       }
     },
     "Window Switcher Placement" : {
+      "extractionState" : "stale",
       "localizations" : {
         "af" : {
           "stringUnit" : {
