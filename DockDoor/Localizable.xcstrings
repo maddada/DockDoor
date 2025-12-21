@@ -40208,6 +40208,9 @@
         }
       }
     },
+    "Enable to adjust the window switcher's position using the sliders below." : {
+
+    },
     "Enable Window Switcher" : {
       "localizations" : {
         "af" : {
@@ -88822,6 +88825,9 @@
         }
       }
     },
+    "Screen Selection" : {
+
+    },
     "Screen with last active window" : {
       "comment" : "Window switcher placement option",
       "localizations" : {
@@ -93982,6 +93988,12 @@
           }
         }
       }
+    },
+    "Shift Vertical Position" : {
+
+    },
+    "Shift Window Switcher Placement" : {
+
     },
     "Show active app indicator below dock icon" : {
       "comment" : "A toggle switch label that enables or disables the display of a line below the currently active application's dock icon.",
