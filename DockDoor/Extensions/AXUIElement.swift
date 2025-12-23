@@ -69,31 +69,67 @@ extension AXUIElement {
         try attribute(kAXWindowsAttribute, [AXUIElement].self)
     }
 
-    static func windowsByBruteForce(_ pid: pid_t) -> [AXUIElement] {
+    /// Brute-force window enumeration by iterating over AXUIElementIDs.
+    /// For special apps (Steam, Android emulators, etc.), we accept windows with non-standard subroles.
+    /// - Parameters:
+    ///   - pid: The process identifier
+    ///   - app: Optional app for special handling of non-standard subroles
+    /// - Returns: Array of AXUIElement windows
+    static func windowsByBruteForce(_ pid: pid_t, app: NSRunningApplication? = nil) -> [AXUIElement] {
         var token = Data(count: 20)
         token.replaceSubrange(0 ..< 4, with: withUnsafeBytes(of: pid) { Data($0) })
         token.replaceSubrange(4 ..< 8, with: withUnsafeBytes(of: Int32(0)) { Data($0) })
         token.replaceSubrange(8 ..< 12, with: withUnsafeBytes(of: Int32(0x636F_636F)) { Data($0) })
 
         var results: [AXUIElement] = []
+        let isSpecialApp = app.map { SpecialWindowHandlers.isSpecialAppWithNonStandardSubrole(app: $0) } ?? false
+
         for axId: AXUIElementID in 0 ..< 1000 {
             token.replaceSubrange(12 ..< 20, with: withUnsafeBytes(of: axId) { Data($0) })
-            if let el = _AXUIElementCreateWithRemoteToken(token as CFData)?.takeRetainedValue(),
-               let subrole = try? el.subrole(),
-               [kAXStandardWindowSubrole, kAXDialogSubrole].contains(subrole)
-            {
+            guard let el = _AXUIElementCreateWithRemoteToken(token as CFData)?.takeRetainedValue() else {
+                continue
+            }
+
+            // Check role first - must be a window
+            guard let role = try? el.role(), role == kAXWindowRole else {
+                continue
+            }
+
+            let subrole = try? el.subrole()
+
+            // For special apps (Steam, Android emulators, etc.), accept windows with any subrole
+            if isSpecialApp {
+                // Still filter out obvious non-windows for special apps
+                // Steam dropdown menus have role == nil when switching quickly
+                if let subrole, subrole == "AXSystemDialog" {
+                    continue // Skip system dialogs like tooltips
+                }
+                logWindowDiscovery("[windowsByBruteForce] Accepted window from special app: \(app?.localizedName ?? "unknown"), subrole: \(subrole ?? "nil")")
+                results.append(el)
+                continue
+            }
+
+            // For normal apps, require standard subroles
+            if let subrole, [kAXStandardWindowSubrole, kAXDialogSubrole].contains(subrole) {
                 results.append(el)
             }
         }
         return results
     }
 
-    static func allWindows(_ pid: pid_t, appElement: AXUIElement) -> [AXUIElement] {
+    /// Gets all windows for an app using both standard AX API and brute-force enumeration.
+    /// This ensures we catch windows on other spaces and from apps with non-standard configurations.
+    /// - Parameters:
+    ///   - pid: The process identifier
+    ///   - appElement: The app's AXUIElement
+    ///   - app: Optional app for special handling of non-standard subroles
+    /// - Returns: Array of AXUIElement windows
+    static func allWindows(_ pid: pid_t, appElement: AXUIElement, app: NSRunningApplication? = nil) -> [AXUIElement] {
         var set = Set<AXUIElement>()
         if let maybe = try? appElement.windows() {
             set.formUnion(maybe)
         }
-        let brute = windowsByBruteForce(pid)
+        let brute = windowsByBruteForce(pid, app: app)
         set.formUnion(brute)
         return Array(set)
     }

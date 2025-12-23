@@ -614,8 +614,13 @@ extension WindowUtil {
         }
 
         let appAX = AXUIElementCreateApplication(pid)
-        let axWindows = AXUIElement.allWindows(pid, appElement: appAX)
-        guard !axWindows.isEmpty else { return 0 }
+        // Pass app to enable special handling for Steam, Android emulators, etc.
+        let axWindows = AXUIElement.allWindows(pid, appElement: appAX, app: app)
+        guard !axWindows.isEmpty else {
+            logWindowDiscovery("[discoverWindowsViaAX] No windows found for \(app.localizedName ?? "unknown")")
+            return 0
+        }
+        logWindowDiscovery("[discoverWindowsViaAX] Found \(axWindows.count) windows for \(app.localizedName ?? "unknown")")
 
         let group = LimitedTaskGroup<Void>(maxConcurrentTasks: 4)
 
@@ -846,34 +851,53 @@ extension WindowUtil {
     ) async throws {
         let pid = app.processIdentifier
 
-        guard isValidAXWindowCandidate(axWindow) else { return }
+        // Pass app to enable special handling for Steam, Android emulators, etc.
+        guard isValidAXWindowCandidate(axWindow, app: app) else { return }
 
-        let cgCandidates = getCGWindowCandidates(for: pid)
+        // Pass app to include windows from non-zero layers for special apps
+        let cgCandidates = getCGWindowCandidates(for: pid, app: app)
         let usedIDs = Set<CGWindowID>(desktopSpaceWindowCacheManager.readCache(pid: pid).map(\.id))
 
         var cgID: CGWindowID = 0
         if _AXUIElementGetWindow(axWindow, &cgID) == .success, cgID != 0 {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Got cgID \(cgID) via _AXUIElementGetWindow for \(app.localizedName ?? "unknown")")
         } else if let mapped = mapAXToCG(axWindow: axWindow, candidates: cgCandidates, excluding: usedIDs) {
             cgID = mapped
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Got cgID \(cgID) via mapAXToCG for \(app.localizedName ?? "unknown")")
         } else {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Failed to get cgID for \(app.localizedName ?? "unknown") - no mapping found")
             return
         }
 
-        guard !excludeWindowIDs.contains(cgID), !usedIDs.contains(cgID) else { return }
+        guard !excludeWindowIDs.contains(cgID), !usedIDs.contains(cgID) else {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Skipping cgID \(cgID) - already excluded or used")
+            return
+        }
 
-        guard isAtLeastNormalLevel(cgID) else { return }
+        let windowLevel = cgID.cgsLevel()
+        guard isAtLeastNormalLevel(cgID, app: app) else {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Rejected cgID \(cgID) for \(app.localizedName ?? "unknown") - level \(windowLevel) not acceptable")
+            return
+        }
 
         let titleFilters = Defaults[.windowTitleFilters]
         if !titleFilters.isEmpty {
             let cgTitle = cgID.cgsTitle() ?? ""
             if titleFilters.contains(where: { cgTitle.lowercased().contains($0.lowercased()) }) {
+                logWindowDiscovery("[captureAndCacheAXWindowInfo] Rejected cgID \(cgID) for \(app.localizedName ?? "unknown") - title filter matched")
                 return
             }
         }
 
-        guard isValidCGWindowCandidate(cgID, in: cgCandidates) else { return }
+        guard isValidCGWindowCandidate(cgID, in: cgCandidates) else {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Rejected cgID \(cgID) for \(app.localizedName ?? "unknown") - invalid CG candidate (size/alpha)")
+            return
+        }
 
-        guard let cgEntry = findCGEntry(for: cgID, in: cgCandidates) else { return }
+        guard let cgEntry = findCGEntry(for: cgID, in: cgCandidates) else {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Rejected cgID \(cgID) for \(app.localizedName ?? "unknown") - no CG entry found in candidates")
+            return
+        }
 
         let activeSpaceIDs = currentActiveSpaceIDs()
         guard shouldAcceptWindow(
@@ -883,12 +907,17 @@ extension WindowUtil {
             app: app,
             activeSpaceIDs: activeSpaceIDs,
             scBacked: false
-        ) else { return }
+        ) else {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Rejected cgID \(cgID) for \(app.localizedName ?? "unknown") - shouldAcceptWindow returned false")
+            return
+        }
 
         // Try AX title first (works without screen recording permission), fall back to CGS title
         let windowTitle = (try? axWindow.title()) ?? cgID.cgsTitle()
         let minimizedState = (try? axWindow.isMinimized()) ?? false
         let hiddenState = app.isHidden
+
+        logWindowDiscovery("[captureAndCacheAXWindowInfo] ACCEPTED window cgID \(cgID) for \(app.localizedName ?? "unknown") - title: '\(windowTitle ?? "nil")', level: \(windowLevel)")
 
         var info = WindowInfo(
             windowProvider: AXFallbackProvider(cgID: cgID),
@@ -907,6 +936,9 @@ extension WindowUtil {
         if let image = try? await captureWindowImage(windowID: cgID, pid: pid, windowTitle: windowTitle) {
             info.image = image
             info.imageCapturedTime = Date()
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Captured image for cgID \(cgID)")
+        } else {
+            logWindowDiscovery("[captureAndCacheAXWindowInfo] Failed to capture image for cgID \(cgID)")
         }
 
         updateDesktopSpaceWindowCache(with: info)
